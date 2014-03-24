@@ -8,8 +8,8 @@ d = generate_distutils_setup(
    # scripts=['bin/myscript'], 
    #scripts=['src/simple_script_server.py'],
    #py_modules=['cob_script_server'],
-   packages=['simple_script_server'],
-   package_dir={'': 'src'}
+   packages=['buttons'],
+   package_dir={'': 'ros/src'}
 )
 
 setup(**d)

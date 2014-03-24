@@ -47,6 +47,9 @@ install(TARGETS cob_teleop
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
+install(DIRECTORY ros/launch
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/ros/launch
+)
 
 #OLD
 #find_package(catkin REQUIRED COMPONENTS roscpp std_msgs geometry_msgs sensor_msgs trajectory_msgs cob_srvs brics_actuator)
