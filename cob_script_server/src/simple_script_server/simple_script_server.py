@@ -79,11 +79,13 @@ from move_base_msgs.msg import *
 from tf.transformations import *
 from std_msgs.msg import String,ColorRGBA
 from control_msgs.msg import *
+from cob_light.msg import LightMode
 
 # care-o-bot includes
 from cob_sound.msg import *
 from cob_script_server.msg import *
 from cob_srvs.srv import *
+from cob_light.srv import *
 
 # graph includes
 import pygraphviz as pgv
@@ -189,7 +191,6 @@ class simple_script_server:
 		self.ns_global_prefix = "/script_server"
 		self.wav_path = ""
 		self.parse = parse
-		
 		
 		rospy.sleep(1) # we have to wait here until publishers are ready, don't ask why
 
@@ -700,8 +701,9 @@ class simple_script_server:
 	# The color is given by a parameter on the parameter server.
 	#
 	# \param parameter_name Name of the parameter on the parameter server which holds the rgb values.
-	def set_light(self,parameter_name,blocking=False):
-		ah = action_handle("set", "light", parameter_name, blocking, self.parse)
+
+	def set_light(self,component_name,parameter_name,blocking=False):
+		ah = action_handle("set_light", component_name, parameter_name, blocking, self.parse)
 		if(self.parse):
 			return ah
 		else:
@@ -709,13 +711,6 @@ class simple_script_server:
 
 		rospy.loginfo("Set light to <<%s>>",parameter_name)
 		
-		topic_parameter_name = self.ns_global_prefix + "/light/topic_name"
-		if not rospy.has_param(topic_parameter_name):
-			rospy.logerr("parameter %s does not exist on ROS Parameter Server, aborting...",topic_parameter_name)
-			return 2
-		self.light_topic_name = rospy.get_param(topic_parameter_name)
-		self.pub_light = rospy.Publisher(self.light_topic_name, ColorRGBA, queue_size=1)
-
 		# get joint values from parameter server
 		if type(parameter_name) is str:
 			if not rospy.has_param(self.ns_global_prefix + "/light/" + parameter_name):
@@ -754,10 +749,26 @@ class simple_script_server:
 		color.r = param[0]
 		color.g = param[1]
 		color.b = param[2]
-		color.a = 1 # Transparency
+		color.a = param[3] # Transparency
 
-		# publish color		
-		self.pub_light.publish(color)
+		srv_name = "/" + component_name + "/mode"
+		mode =  LightMode()
+		mode.mode = 1
+		mode.color = color
+
+		try:
+			rospy.wait_for_service(srv_name,5)
+		except rospy.ROSException, e:
+			error_message = "%s"%e
+			rospy.logerr("...<<%s>> service of <<%s>> not available, error: %s",srv_name, component_name, error_message)
+			ah.set_failed(4)
+			return ah
+		
+		try:
+			light_srv = rospy.ServiceProxy(srv_name, SetLightMode)
+			light_srv(mode)
+		except rospy.ServiceException, e:
+			print "Service call failed: %s"%e
 		
 		ah.set_succeeded()
 		ah.error_code = 0
